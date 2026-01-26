@@ -13,6 +13,7 @@ from datetime import datetime
 import pystray
 from PIL import Image, ImageDraw
 import config
+import json
 import webbrowser
 
 
@@ -307,17 +308,19 @@ class PCControllerGUI:
 
         self.add_log("⚠️ Bot durduruluyor... (Program yeniden başlatılacak)", "WARNING")
 
-        # AUTOSTART_BOT → False
+        # AUTOSTART_BOT → False (secret.json üzerinden)
         try:
-            with open('config.py', 'r', encoding='utf-8') as f:
-                content = f.read()
-            import re
-            if 'AUTOSTART_BOT' in content:
-                content = re.sub(r'AUTOSTART_BOT\s*=\s*True', 'AUTOSTART_BOT = False', content)
-            else:
-                content += "\n\n# Otomatik başlatma\nAUTOSTART_BOT = False\n"
-            with open('config.py', 'w', encoding='utf-8') as f:
-                f.write(content)
+            secret_path = os.path.join(config.get_base_path(), "secret.json")
+            data = {}
+            if os.path.exists(secret_path):
+                with open(secret_path, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+            
+            data["AUTOSTART_BOT"] = False
+            
+            with open(secret_path, 'w', encoding='utf-8') as f:
+                json.dump(data, f, indent=4)
+                
             self.add_log("AUTOSTART_BOT devre dışı bırakıldı", "INFO")
         except Exception as e:
             self.add_log(f"Config güncellenemedi: {e}", "ERROR")
@@ -456,12 +459,20 @@ class PCControllerGUI:
 
     
     def _notify(self, title, message):
-        """Tepsi bildirimi (opsiyonel plyer). Plyer yoksa sessiz geç."""
+        """Tepsi bildirimi gösterir (Pystray veya Plyer kullanarak)"""
+        # 1. Pystray (Tepsi ikonu üzerinden native bildirim)
+        if self.tray_icon:
+            try:
+                self.tray_icon.notify(message, title)
+                return
+            except Exception:
+                pass
+
+        # 2. Plyer (Alternatif kütüphane)
         try:
             from plyer import notification
             notification.notify(title=title, message=message, app_name="PC Controller", timeout=5)
         except Exception:
-            # Plyer yoksa problemsiz atla
             pass
     
     # ---------------- Mainloop ----------------
@@ -573,7 +584,6 @@ class SettingsWindow:
     
     def save_bot_settings(self):
         """Bot token ve chat ID'yi secret.json dosyasına kaydeder."""
-        import json
         secret_path = os.path.join(config.get_base_path(), "secret.json")
 
         new_token = self.token_entry.get().strip()
@@ -599,6 +609,9 @@ class SettingsWindow:
 
             data["BOT_TOKEN"] = new_token
             data["AUTHORIZED_CHAT_ID"] = chat_id
+            # AUTOSTART_BOT değerini koru veya varsayılan True yap
+            if "AUTOSTART_BOT" not in data:
+                data["AUTOSTART_BOT"] = True
 
             # JSON'u yaz
             with open(secret_path, "w", encoding="utf-8") as f:
@@ -671,19 +684,18 @@ class SettingsWindow:
     
     def save_startup_settings(self):
         try:
-            with open('config.py', 'r', encoding='utf-8') as f:
-                content = f.read()
-            import re
-            if 'AUTOSTART_BOT' in content:
-                content = re.sub(
-                    r'AUTOSTART_BOT = (True|False)',
-                    f'AUTOSTART_BOT = {self.autostart_bot_var.get()}',
-                    content
-                )
-            else:
-                content += f"\n\n# Otomatik başlatma\nAUTOSTART_BOT = {self.autostart_bot_var.get()}\n"
-            with open('config.py', 'w', encoding='utf-8') as f:
-                f.write(content)
+            # secret.json güncelle
+            secret_path = os.path.join(config.get_base_path(), "secret.json")
+            data = {}
+            if os.path.exists(secret_path):
+                with open(secret_path, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+            
+            data["AUTOSTART_BOT"] = self.autostart_bot_var.get()
+            
+            with open(secret_path, 'w', encoding='utf-8') as f:
+                json.dump(data, f, indent=4)
+
             import importlib
             importlib.reload(config)
             result = messagebox.askyesno(

@@ -26,7 +26,8 @@ def load_secrets():
     if not os.path.exists(secret_path):
         default_secret = {
             "BOT_TOKEN": "BURAYA_BOT_TOKEN_YAZIN",
-            "AUTHORIZED_CHAT_ID": 0
+            "AUTHORIZED_CHAT_ID": 0,
+            "AUTOSTART_BOT": True
         }
         with open(secret_path, "w", encoding="utf-8") as f:
             json.dump(default_secret, f, indent=4)
@@ -41,13 +42,14 @@ def load_secrets():
             return data
     except Exception as e:
         print(f"❌ secret.json okunamadı: {e}")
-        return {"BOT_TOKEN": None, "AUTHORIZED_CHAT_ID": 0}
+        return {"BOT_TOKEN": None, "AUTHORIZED_CHAT_ID": 0, "AUTOSTART_BOT": True}
 
 
 # Değerleri yükle
 _secrets = load_secrets()
 BOT_TOKEN = _secrets.get("BOT_TOKEN")
 AUTHORIZED_CHAT_ID = _secrets.get("AUTHORIZED_CHAT_ID")
+AUTOSTART_BOT = _secrets.get("AUTOSTART_BOT", True)
 # ============================================
 # UYGULAMA AYARLARI
 # ============================================
@@ -111,6 +113,3 @@ ERROR_MESSAGES = {
     "command_failed": "❌ Komut çalıştırılamadı: {}",
     "unsupported_os": "❌ İşletim sisteminiz desteklenmiyor: {}",
 }
-
-# Otomatik başlatma
-AUTOSTART_BOT = True

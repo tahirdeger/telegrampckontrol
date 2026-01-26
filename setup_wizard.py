@@ -8,6 +8,8 @@ from tkinter import ttk, messagebox
 import webbrowser
 import os
 import re
+import json
+import config
 
 
 class SetupWizard:
@@ -17,7 +19,7 @@ class SetupWizard:
         self.root = tk.Tk()
         self.root.title("PC Controller - Kurulum Sihirbazı")
         self.root.geometry("700x550")
-        self.root.resizable(False, False)
+        self.root.resizable(True, True)
         
         # Veriler
         self.bot_token = ""
@@ -31,13 +33,15 @@ class SetupWizard:
         
         # Ana konteyner
         self.main_frame = ttk.Frame(self.root)
-        self.main_frame.pack(fill=tk.BOTH, expand=True)
         
         # Sayfaları oluştur
         self.create_pages()
         
         # Navigasyon çubuğu
         self.create_navigation()
+        
+        # Ana konteyneri yerleştir (Navigasyonun üstüne oturması için en son pack ediyoruz)
+        self.main_frame.pack(fill=tk.BOTH, expand=True)
         
         # İlk sayfayı göster
         self.show_page(0)
@@ -468,31 +472,27 @@ Tebrikler! PC Controller başarıyla kuruldu.
             self.setup_completed = False
     
     def save_config(self):
-        """Ayarları config.py'ye kaydeder"""
+        """Ayarları secret.json dosyasına kaydeder"""
         
-        with open('config.py', 'r', encoding='utf-8') as f:
-            content = f.read()
+        secret_path = os.path.join(config.get_base_path(), "secret.json")
         
-        # Token güncelle
-        content = content.replace(
-            'BOT_TOKEN = "BURAYA_BOT_TOKEN_YAZIN"',
-            f'BOT_TOKEN = "{self.bot_token}"'
-        )
+        # Mevcut veriyi oku veya yeni oluştur
+        data = {}
+        if os.path.exists(secret_path):
+            try:
+                with open(secret_path, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+            except:
+                pass
         
-        # Chat ID güncelle
-        content = content.replace(
-            'AUTHORIZED_CHAT_ID = 0',
-            f'AUTHORIZED_CHAT_ID = {self.chat_id}'
-        )
+        # Verileri güncelle
+        data["BOT_TOKEN"] = self.bot_token
+        data["AUTHORIZED_CHAT_ID"] = int(self.chat_id)
+        data["AUTOSTART_BOT"] = self.autostart_bot
         
-        # Autostart bot ayarını güncelle veya ekle
-        if 'AUTOSTART_BOT' in content:
-            content = re.sub(r'AUTOSTART_BOT\s*=\s*(True|False)', f'AUTOSTART_BOT = {self.autostart_bot}', content)
-        else:
-            content += f"\n\n# Otomatik başlatma\nAUTOSTART_BOT = {self.autostart_bot}\n"
-        
-        with open('config.py', 'w', encoding='utf-8') as f:
-            f.write(content)
+        # Kaydet
+        with open(secret_path, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=4)
     
     def add_to_startup(self):
         """Windows başlangıcına ekler"""
