@@ -1,0 +1,10 @@
+📦PC_CONTROL
+├── 📦bot_handler.py
+├── 📦bıild_exe.py
+├── 📦config.py
+├── 📦gui.py
+├── 📦hizli_baslangic.md
+├── 📦main.py
+├── 📦setup_wizard.py
+├── 📦secret.json
+└── 📦system_control.py

@@ -1,0 +1,21 @@
+# Hassas Dosyalar (KESİNLİKLE GİTHUB'A GİTMEMELİ)
+secret.json
+
+# Python Derleme ve Önbellek Dosyaları
+__pycache__/
+*.pyc
+
+# Sanal Ortam Klasörleri
+.venv/
+venv/
+env/
+
+# PyInstaller Derleme Çıktıları
+build/
+dist/
+*.spec
+
+# Uygulama Verileri ve Loglar
+shots/
+*.log
+temp_screenshot.png
