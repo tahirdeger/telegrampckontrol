@@ -104,5 +104,4 @@ Bu yazılım sadece **kendi bilgisayarınızı** veya **izniniz olan cihazları*
 
 ## 
 
-[https:// islematolyesi.odoo.com](https://islematolyesi.odoo.com/)
-
+[https://islematolyesi.odoo.com](https://islematolyesi.odoo.com/)

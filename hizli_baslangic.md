@@ -362,7 +362,7 @@ Bu proje TAHIR tarafından eğitim amaçlı oluşturuldu. Kendi sorumluluğunuzd
 
 ---
 
-**Hazırlayan:** TAHIR - "https: islematolyesi.odoo.com"
+**Hazırlayan:** TAHIR - "https://islematolyesi.odoo.com"
 **Versiyon:** 1.0
 **Son Güncelleme:** 2025
 

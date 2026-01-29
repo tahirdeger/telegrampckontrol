@@ -96,6 +96,9 @@ class PCControllerGUI:
         # Log güncelleyici
         self.update_log_display()
 
+        # Başlangıçta yol kontrolü yap (Taşınma durumu için)
+        self.root.after(2000, self.verify_and_fix_startup_path)
+
     # ---------------- GUI Kurulum ----------------
     def create_gui(self):
         """GUI bileşenlerini oluşturur"""
@@ -244,6 +247,45 @@ class PCControllerGUI:
         # İlk log
         self.add_log("Program başlatıldı", "INFO")
 
+    # ---------------- Başlangıç Yolu Kontrolü ----------------
+    def verify_and_fix_startup_path(self):
+        """Uygulama taşındıysa kayıt defterindeki yolu düzeltir"""
+        if sys.platform != 'win32':
+            return
+
+        try:
+            import winreg
+            key = winreg.OpenKey(winreg.HKEY_CURRENT_USER,
+                                r"Software\Microsoft\Windows\CurrentVersion\Run",
+                                0, winreg.KEY_ALL_ACCESS)
+            
+            try:
+                # Mevcut kaydı oku
+                value, _ = winreg.QueryValueEx(key, "PCControllerBot")
+                
+                # Şu anki doğru komutu oluştur
+                if getattr(sys, 'frozen', False):
+                    exe_path = os.path.abspath(sys.executable)
+                    current_command = f'"{exe_path}"'
+                else:
+                    python_exe = sys.executable.replace("python.exe", "pythonw.exe")
+                    if not os.path.exists(python_exe):
+                        python_exe = sys.executable
+                    script_path = os.path.abspath(sys.argv[0])
+                    current_command = f'"{python_exe}" "{script_path}"'
+                
+                # Eğer kayıtlı yol ile şu anki yol farklıysa güncelle
+                if value != current_command:
+                    self.add_log("⚠️ Uygulama taşınmış, kayıt düzeltiliyor...", "WARNING")
+                    winreg.SetValueEx(key, "PCControllerBot", 0, winreg.REG_SZ, current_command)
+                    self.add_log("✅ Başlangıç kaydı yeni konuma güncellendi.", "SUCCESS")
+                    
+            except FileNotFoundError:
+                pass # Kayıt yoksa işlem yapma
+                
+            winreg.CloseKey(key)
+        except Exception as e:
+            self.add_log(f"Registry kontrol hatası: {e}", "ERROR")
 
     # ---------------- Bot Başlat/Durdur ----------------
     def toggle_bot(self):
@@ -647,8 +689,19 @@ class SettingsWindow:
                                 r"Software\Microsoft\Windows\CurrentVersion\Run",
                                 0, winreg.KEY_READ)
             try:
-                winreg.QueryValueEx(key, "PCControllerBot")
+                value, _ = winreg.QueryValueEx(key, "PCControllerBot")
                 winreg.CloseKey(key)
+                
+                # EXE modunda çalışıyorsak yolun doğru olup olmadığını kontrol et
+                # (Kullanıcı EXE'yi taşıdıysa registry'deki yol eski kalmış olabilir)
+                if getattr(sys, 'frozen', False):
+                    current_exe = os.path.abspath(sys.executable)
+                    reg_path = value.replace('"', '') # Tırnakları temizle
+                    
+                    # Yolları karşılaştır (Büyük/küçük harf duyarsız)
+                    if os.path.normcase(reg_path) != os.path.normcase(current_exe):
+                        return False
+                
                 return True
             except FileNotFoundError:
                 winreg.CloseKey(key)
@@ -668,8 +721,20 @@ class SettingsWindow:
                                 r"Software\Microsoft\Windows\CurrentVersion\Run",
                                 0, winreg.KEY_SET_VALUE)
             if self.startup_var.get():
-                exe_path = os.path.abspath(sys.argv[0])
-                winreg.SetValueEx(key, "PCControllerBot", 0, winreg.REG_SZ, f'"{exe_path}"')
+                if getattr(sys, 'frozen', False):
+                    # .exe olarak çalışıyorsa
+                    exe_path = os.path.abspath(sys.executable)
+                    command = f'"{exe_path}"'
+                else:
+                    # .py olarak çalışıyorsa, python.exe ile betiği çalıştırmalı
+                    # pythonw.exe kullanırsak konsol penceresi açılmaz
+                    python_exe = sys.executable.replace("python.exe", "pythonw.exe")
+                    if not os.path.exists(python_exe):
+                        python_exe = sys.executable
+                    
+                    script_path = os.path.abspath(sys.argv[0])
+                    command = f'"{python_exe}" "{script_path}"'
+                winreg.SetValueEx(key, "PCControllerBot", 0, winreg.REG_SZ, command)
                 messagebox.showinfo("Başarılı", "Otomatik başlatma etkinleştirildi!")
             else:
                 try:

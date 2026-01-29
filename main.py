@@ -18,6 +18,18 @@ from tkinter import messagebox
 def main():
     """Ana program başlatıcı"""
     
+    # Windows başlangıcında çalışma dizinini düzelt (System32 sorunu ve Portable uyumluluk)
+    if getattr(sys, 'frozen', False):
+        # .exe olarak çalışıyorsa, .exe'nin olduğu dizin
+        application_path = os.path.dirname(sys.executable)
+    else:
+        # .py olarak çalışıyorsa, main.py'nin olduğu dizin
+        application_path = os.path.dirname(os.path.abspath(__file__))
+    
+    os.chdir(application_path)
+    if application_path not in sys.path:
+        sys.path.insert(0, application_path)
+
     try:
         import config
         from setup_wizard import check_if_first_run, SetupWizard

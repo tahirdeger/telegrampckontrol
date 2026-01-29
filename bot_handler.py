@@ -137,7 +137,7 @@ class BotHandler:
         success, message = self.system.logout_session()
         await update.message.reply_text(message)
         if self.gui_callback:
-                self.gui_callback("KOMUT", f"{update.message.text} komutu çalıştırıldı.")
+            self.gui_callback("KOMUT", f"{update.message.text} komutu çalıştırıldı.")
 
     async def post_init(self, application: Application):
         """Bot başlatıldığında çalışır ve bildirim gönderir"""
@@ -178,7 +178,7 @@ class BotHandler:
         self.application.add_handler(CommandHandler("ekrangoruntu", self.screenshot_command))
         self.application.add_handler(CommandHandler("kameragoruntu", self.webcam_command))
         self.application.add_handler(CommandHandler("pckapat", self.shutdown_command))
-        self.application.add_handler(CommandHandler("otorumkapat", self.logout_command))
+        self.application.add_handler(CommandHandler("oturumkapat", self.logout_command))
 
         # Serbest metin mesajları (sohbet için)
         async def any_text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):

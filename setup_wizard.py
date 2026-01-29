@@ -445,6 +445,7 @@ Tebrikler! PC Controller başarıyla kuruldu.
         
         if messagebox.askyesno("İptal", "Kurulumdan çıkmak istediğinize emin misiniz?"):
             self.root.quit()
+            self.root.destroy()
             self.setup_completed = False
     
     def finish_setup(self):
@@ -464,6 +465,7 @@ Tebrikler! PC Controller başarıyla kuruldu.
             
             self.setup_completed = True
             self.root.quit()
+            self.root.destroy()
             
         except Exception as e:
             messagebox.showerror("Hata", 
@@ -509,12 +511,29 @@ Tebrikler! PC Controller başarıyla kuruldu.
                                 r"Software\Microsoft\Windows\CurrentVersion\Run",
                                 0, winreg.KEY_SET_VALUE)
             
-            exe_path = os.path.abspath(sys.argv[0])
-            winreg.SetValueEx(key, "PCControllerBot", 0, winreg.REG_SZ, f'"{exe_path}"')
+            if getattr(sys, 'frozen', False):
+                # .exe olarak çalışıyorsa
+                exe_path = os.path.abspath(sys.executable)
+                command = f'"{exe_path}"'
+            else:
+                # .py olarak çalışıyorsa, python.exe ile betiği çalıştırmalı
+                # pythonw.exe kullanırsak konsol penceresi açılmaz (tercihen)
+                python_exe = sys.executable.replace("python.exe", "pythonw.exe")
+                if not os.path.exists(python_exe): 
+                    python_exe = sys.executable # pythonw yoksa normal python kullan
+                
+                script_path = os.path.abspath(sys.argv[0])
+                command = f'"{python_exe}" "{script_path}"'
+            
+            winreg.SetValueEx(key, "PCControllerBot", 0, winreg.REG_SZ, command)
             winreg.CloseKey(key)
+            # Kullanıcıya bilgi verelim (Log veya print)
+            print(f"✅ Windows başlangıcına eklendi: {command}")
             
         except Exception as e:
-            print(f"Windows başlangıcına eklenemedi: {e}")
+            print(f"❌ Başlangıca ekleme hatası: {e}")
+            # Hata olsa bile programın kapanmaması için sessizce devam edebilir veya uyarabiliriz
+            # messagebox.showerror("Hata", f"Başlangıç ayarı yapılamadı: {e}")
     
     def run(self):
         """Sihirbazı çalıştırır"""
