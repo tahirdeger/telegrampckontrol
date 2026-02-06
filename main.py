@@ -89,7 +89,10 @@ def main():
         print(f"❌ Gerekli modül bulunamadı: {e}")
         print("\nEksik kütüphaneleri yükleyin:")
         print("pip install python-telegram-bot pillow psutil pystray")
-        input("\nÇıkmak için Enter'a basın...")
+        try:
+            messagebox.showerror("Modül Hatası", f"Gerekli modül bulunamadı:\n{e}\n\nLütfen EXE'yi yeniden derleyin.")
+        except:
+            pass
         sys.exit(1)
         
     except Exception as e:
@@ -111,7 +114,6 @@ def main():
         except:
             pass
         
-        input("\nÇıkmak için Enter'a basın...")
         sys.exit(1)
 
 

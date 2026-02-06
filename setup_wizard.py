@@ -507,9 +507,8 @@ Tebrikler! PC Controller başarıyla kuruldu.
             import winreg
             import sys
             
-            key = winreg.OpenKey(winreg.HKEY_CURRENT_USER,
-                                r"Software\Microsoft\Windows\CurrentVersion\Run",
-                                0, winreg.KEY_SET_VALUE)
+            key = winreg.CreateKey(winreg.HKEY_CURRENT_USER,
+                                r"Software\Microsoft\Windows\CurrentVersion\Run")
             
             if getattr(sys, 'frozen', False):
                 # .exe olarak çalışıyorsa
@@ -524,6 +523,12 @@ Tebrikler! PC Controller başarıyla kuruldu.
                 
                 script_path = os.path.abspath(sys.argv[0])
                 command = f'"{python_exe}" "{script_path}"'
+            
+            # Önce eski kaydı temizle
+            try:
+                winreg.DeleteValue(key, "PCControllerBot")
+            except FileNotFoundError:
+                pass
             
             winreg.SetValueEx(key, "PCControllerBot", 0, winreg.REG_SZ, command)
             winreg.CloseKey(key)

@@ -24,8 +24,8 @@ Bu proje ile bilgisayarınızın performansını izleyebilir, ekran görüntüs�
 ### 1. Projeyi İndirin
 
 ```bash
-git clone https://github.com/KULLANICI_ADINIZ/telegram-pc-controller.git
-cd telegram-pc-controller
+git clone https://github.com/tahirdeger/telegrampckontrol.git
+cd telegrampckontrol
 ```
 
 ### 2. Gereksinimleri Yükleyin
@@ -49,6 +49,7 @@ Program ilk kez çalıştırıldığında **Kurulum Sihirbazı** otomatik olarak
 3. **Ayarlar:** Windows başlangıcında çalışma ayarlarını seçin.
 
 > **Not:** Hassas bilgileriniz (`secret.json`) bilgisayarınızda yerel olarak saklanır ve GitHub'a yüklenmez.
+
 
 ## 📱 Kullanım (Telegram Komutları)
 
@@ -89,6 +90,14 @@ telegram-pc-controller/
 ├── requirements.txt    # Kütüphane listesi
 └── secret.json         # (Otomatik oluşur) Token ve ID saklar
 ```
+
+##❓ Sorun Giderme
+Windows Başlangıcında Otomatik Çalışmıyor + Eğer uygulama ayarlarından "Windows başlangıcında otomatik başlat" seçeneğini aktif etmenize rağmen bilgisayar açıldığında program çalışmıyorsa:
+ 1. Ctrl + Shift + Esc tuşlarına basarak Görev Yöneticisi'ni açın.
+ 2. Başlangıç Uygulamaları sekmesine tıklayın.
+ 3. Listede PCControllerBot kaydını bulun.
+ 4. Eğer durumu Devre Dışı görünüyorsa, sağ tıklayıp Etkinleştir seçeneğini seçin. 
+ 
 
 ## 🤝 Katkıda Bulunma
 

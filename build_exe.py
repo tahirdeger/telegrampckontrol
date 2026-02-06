@@ -143,7 +143,8 @@ a = Analysis(
         'plyer',
         'cv2',
         'asyncio',
-        'tkinter'
+        'tkinter',
+        'psutil._psutil_windows'
     ],
     hookspath=[],
     hooksconfig={},

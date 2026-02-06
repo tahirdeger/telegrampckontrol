@@ -160,6 +160,27 @@ class BotHandler:
             if config.ENABLE_LOGGING:
                 self.logger.error(f"Başlangıç mesajı gönderilemedi: {e}")
 
+    # ---------- Bot Durdur ----------
+    def stop(self):
+        """Botu ve döngüyü güvenli bir şekilde durdurur"""
+        if self.application and self.bot_loop and self.bot_loop.is_running():
+            async def _stop_process():
+                try:
+                    # Updater durdur
+                    if self.application.updater and self.application.updater.running:
+                        await self.application.updater.stop()
+                    
+                    # Application durdur
+                    if self.application.running:
+                        await self.application.stop()
+                        await self.application.shutdown()
+                except Exception as e:
+                    print(f"Bot durdurma hatası: {e}")
+                finally:
+                    self.bot_loop.stop()
+
+            asyncio.run_coroutine_threadsafe(_stop_process(), self.bot_loop)
+
     # ---------- Bot Başlat ----------
     def run(self):
         """Botu başlatır ve ayrı thread'de çalıştırır."""
@@ -200,7 +221,15 @@ class BotHandler:
             self.bot_loop = asyncio.new_event_loop()
             asyncio.set_event_loop(self.bot_loop)
             print("✅ Bot başlatıldı ve mesaj bekliyor...")
-            self.application.run_polling(allowed_updates=Update.ALL_TYPES)
+            
+            # Manuel Lifecycle Yönetimi (run_polling yerine)
+            async def start_bot_lifecycle():
+                await self.application.initialize()
+                await self.application.start()
+                await self.application.updater.start_polling(allowed_updates=Update.ALL_TYPES)
+            
+            self.bot_loop.run_until_complete(start_bot_lifecycle())
+            self.bot_loop.run_forever()
 
         t = threading.Thread(target=_run, daemon=True)
         t.start()

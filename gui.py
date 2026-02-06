@@ -9,6 +9,7 @@ import threading
 import queue
 import sys
 import os
+import subprocess
 from datetime import datetime
 import pystray
 from PIL import Image, ImageDraw
@@ -255,9 +256,10 @@ class PCControllerGUI:
 
         try:
             import winreg
+            # KEY_ALL_ACCESS yerine sadece gerekli izinleri kullanıyoruz (Erişim hatasını önler)
             key = winreg.OpenKey(winreg.HKEY_CURRENT_USER,
                                 r"Software\Microsoft\Windows\CurrentVersion\Run",
-                                0, winreg.KEY_ALL_ACCESS)
+                                0, winreg.KEY_READ | winreg.KEY_WRITE)
             
             try:
                 # Mevcut kaydı oku
@@ -274,8 +276,8 @@ class PCControllerGUI:
                     script_path = os.path.abspath(sys.argv[0])
                     current_command = f'"{python_exe}" "{script_path}"'
                 
-                # Eğer kayıtlı yol ile şu anki yol farklıysa güncelle
-                if value != current_command:
+                # Eğer kayıtlı yol ile şu anki yol farklıysa güncelle (Büyük/küçük harf duyarsız)
+                if value.lower() != current_command.lower():
                     self.add_log("⚠️ Uygulama taşınmış, kayıt düzeltiliyor...", "WARNING")
                     winreg.SetValueEx(key, "PCControllerBot", 0, winreg.REG_SZ, current_command)
                     self.add_log("✅ Başlangıç kaydı yeni konuma güncellendi.", "SUCCESS")
@@ -315,7 +317,7 @@ class PCControllerGUI:
         self.status_label.configure(text="🟢 Çalışıyor", foreground="green")
         self.settings_button.configure(state=tk.DISABLED)
         
-        self.add_log("Bot başlatılıyor...", "INFO")
+        self.add_log("Bot başlatılıyor...", "SUCCESS")
         
         self.bot_thread = threading.Thread(target=self._run_bot, daemon=True)
         self.bot_thread.start()
@@ -342,13 +344,16 @@ class PCControllerGUI:
         self.status_label.configure(text="🔴 Hata", foreground="red")
         self.settings_button.configure(state=tk.NORMAL)
     
-    # ✅ Güncellenmiş: Durdurunca AUTOSTART_BOT kapat + restart
     def stop_bot(self):
         """Botu durdurur ve otomatik başlatmayı devre dışı bırakır"""
         if not self.bot_running:
             return
 
-        self.add_log("⚠️ Bot durduruluyor... (Program yeniden başlatılacak)", "WARNING")
+        self.add_log("Bot durduruluyor...", "WARNING")
+        
+        # Bot handler üzerinden durdur
+        if self.bot_handler:
+            self.bot_handler.stop()
 
         # AUTOSTART_BOT → False (secret.json üzerinden)
         try:
@@ -370,38 +375,10 @@ class PCControllerGUI:
 
         self.bot_running = False
         self.status_label.configure(text="⚪ Durduruldu", foreground="gray")
-        self.start_button.configure(text="▶ Botu Başlat", state=tk.DISABLED)
-        self.settings_button.configure(state=tk.DISABLED)
-
-        messagebox.showinfo(
-            "Bilgi",
-            "🤖 Bot durduruldu ve otomatik başlatma devre dışı bırakıldı.\n"
-            "Program şimdi yeniden başlatılacak."
-        )
-
-        self.restart_application()
-    
-    # ---------------- Restart / Exit ----------------
-    def restart_application(self):
-        self.add_log("Program yeniden başlatılıyor...", "INFO")
-        if self.bot_running:
-            self.bot_running = False
-        if self.tray_icon:
-            try:
-                self.tray_icon.stop()
-            except:
-                pass
-        python = sys.executable
-        script = os.path.abspath(sys.argv[0])
-        self.root.after(500, lambda: self._do_restart(python, script))
-    
-    def _do_restart(self, python, script):
-        try:
-            self.root.destroy()
-            os.execl(python, python, script)
-        except Exception as e:
-            print(f"Yeniden başlatma hatası: {e}")
-            sys.exit(0)
+        self.start_button.configure(text="▶ Botu Başlat", state=tk.NORMAL)
+        self.settings_button.configure(state=tk.NORMAL)
+        
+        self.add_log("Bot durduruldu.", "INFO")
     
     def quit_application(self, icon=None, item=None):
         """Uygulamayı tamamen kapatır"""
@@ -581,7 +558,7 @@ class SettingsWindow:
                              font=("Arial", 9), foreground="blue", padding=10)
         info_text.pack()
         
-        save_btn = ttk.Button(bot_frame, text="💾 Kaydet ve Yeniden Başlat", command=self.save_bot_settings)
+        save_btn = ttk.Button(bot_frame, text="💾 Ayarları Kaydet", command=self.save_bot_settings)
         save_btn.pack(pady=(10, 0))
         
         # BAŞLANGIÇ AYARLARI
@@ -617,7 +594,7 @@ class SettingsWindow:
                              font=("Arial", 9), foreground="blue", padding=15)
         info_text2.pack()
         
-        save_startup_btn = ttk.Button(startup_frame, text="💾 Kaydet ve Yeniden Başlat", 
+        save_startup_btn = ttk.Button(startup_frame, text="💾 Ayarları Kaydet", 
                                      command=self.save_startup_settings)
         save_startup_btn.pack(pady=(10, 0))
     
@@ -662,18 +639,16 @@ class SettingsWindow:
             # GUI güncelle
             self.main_gui.chat_id_label.configure(text=str(chat_id))
 
-            result = messagebox.askyesno(
+            # Eğer bot çalışıyorsa durdur, böylece yeni ayarlarla başlatılabilir
+            if self.main_gui.bot_running:
+                self.main_gui.stop_bot()
+
+            messagebox.showinfo(
                 "Başarılı",
                 "✅ Bot ayarları secret.json dosyasına kaydedildi!\n\n"
-                "Ayarların geçerli olması için programın\n"
-                "yeniden başlatılması gerekiyor.\n\n"
-                "Şimdi yeniden başlatmak ister misiniz?"
+                "Yeni ayarların geçerli olması için 'Botu Başlat' butonuna basın."
             )
-            if result:
-                self.window.destroy()
-                self.main_gui.restart_application()
-            else:
-                self.window.destroy()
+            self.window.destroy()
 
         except Exception as e:
             messagebox.showerror("Hata", f"Ayarlar kaydedilemedi:\n{str(e)}")
@@ -717,9 +692,16 @@ class SettingsWindow:
             return
         try:
             import winreg
-            key = winreg.OpenKey(winreg.HKEY_CURRENT_USER,
-                                r"Software\Microsoft\Windows\CurrentVersion\Run",
-                                0, winreg.KEY_SET_VALUE)
+            # OpenKey yerine CreateKey kullanmak daha güvenilirdir (yoksa oluşturur)
+            key = winreg.CreateKey(winreg.HKEY_CURRENT_USER,
+                                r"Software\Microsoft\Windows\CurrentVersion\Run")
+            
+            # 1. ADIM: Temiz sayfa için önce mevcut kaydı silmeyi dene (Varsa siler)
+            try:
+                winreg.DeleteValue(key, "PCControllerBot")
+            except FileNotFoundError:
+                pass
+
             if self.startup_var.get():
                 if getattr(sys, 'frozen', False):
                     # .exe olarak çalışıyorsa
@@ -735,13 +717,9 @@ class SettingsWindow:
                     script_path = os.path.abspath(sys.argv[0])
                     command = f'"{python_exe}" "{script_path}"'
                 winreg.SetValueEx(key, "PCControllerBot", 0, winreg.REG_SZ, command)
-                messagebox.showinfo("Başarılı", "Otomatik başlatma etkinleştirildi!")
+                messagebox.showinfo("Başarılı", f"Otomatik başlatma kaydı yenilendi!\n\nKayıt Yolu:\n{command}")
             else:
-                try:
-                    winreg.DeleteValue(key, "PCControllerBot")
-                    messagebox.showinfo("Başarılı", "Otomatik başlatma devre dışı bırakıldı!")
-                except FileNotFoundError:
-                    pass
+                messagebox.showinfo("Başarılı", "Otomatik başlatma devre dışı bırakıldı!")
             winreg.CloseKey(key)
         except Exception as e:
             messagebox.showerror("Hata", f"İşlem başarısız:\n{str(e)}")
@@ -763,17 +741,11 @@ class SettingsWindow:
 
             import importlib
             importlib.reload(config)
-            result = messagebox.askyesno(
+            
+            messagebox.showinfo(
                 "Başarılı",
-                "✅ Başlangıç ayarları kaydedildi!\n\n"
-                "Ayarların geçerli olması için programı\n"
-                "yeniden başlatmak gerekiyor.\n\n"
-                "Şimdi yeniden başlatmak ister misiniz?"
+                "✅ Başlangıç ayarları kaydedildi!"
             )
-            if result:
-                self.window.destroy()
-                self.main_gui.restart_application()
-            else:
-                self.window.destroy()
+            self.window.destroy()
         except Exception as e:
             messagebox.showerror("Hata", f"Ayarlar kaydedilemedi:\n{str(e)}")
